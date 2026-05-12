@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                   Int                          @id @default(autoincrement())
+  name                 String
+  slug                 String                       @unique
+  whistleblowSlaDays   Int                          @default(5)
+  users                User[]
+  departments          Department[]
+  employees            Employee[]
+  jobPostings          JobPosting[]
+  candidates           Candidate[]
+  absences             AbsenceRequest[]
+  payrollDocuments     PayrollDocument[]
+  performanceCycles    PerformanceCycle[]
+  surveys              Survey[]
+  whistleblowCases     WhistleblowCase[]
+  onboardingPlans      OnboardingPlan[]
+  categoryAssignees    OnboardingCategoryAssignee[]
+  workflows            Workflow[]
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  @@map("companies")
+}
+
+model Survey {
+  id          Int              @id @default(autoincrement())
+  companyId   Int
+  company     Company          @relation(fields: [companyId], references: [id])
+  title       String
+  description String?
+  status      String           @default("DRAFT")
+  privacy     String           @default("PRIVATE")
+  startDate   DateTime?
+  endDate     DateTime?
+  questions   SurveyQuestion[]
+  responses   SurveyResponse[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@map("surveys")
+}
+
+model SurveyQuestion {
+  id       Int            @id @default(autoincrement())
+  surveyId Int
+  survey   Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  text     String
+  type     String         @default("RATING")
+  order    Int            @default(0)
+  answers  SurveyAnswer[]
+  @@map("survey_questions")
+}
+
+model SurveyResponse {
+  id          Int            @id @default(autoincrement())
+  surveyId    Int
+  survey      Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  employeeId  Int?
+  submittedAt DateTime       @default(now())
+  answers     SurveyAnswer[]
+  @@map("survey_responses")
+}
+
+model SurveyAnswer {
+  id         Int            @id @default(autoincrement())
+  responseId Int
+  response   SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId Int
+  question   SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value      String
+  @@map("survey_answers")
+}
+
+model PerformanceCycle {
+  id          Int                   @id @default(autoincrement())
+  companyId   Int
+  company     Company               @relation(fields: [companyId], references: [id])
+  name        String
+  status      String                @default("DRAFT")
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  activities  PerformanceActivity[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  @@map("performance_cycles")
+}
+
+model PerformanceActivity {
+  id           Int                    @id @default(autoincrement())
+  cycleId      Int
+  cycle        PerformanceCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  name         String
+  type         String
+  startDate    DateTime
+  endDate      DateTime
+  description  String?
+  participants ActivityParticipant[]
+  createdAt    DateTime               @default(now())
+  @@map("performance_activities")
+}
+
+model ActivityParticipant {
+  activityId Int
+  employeeId Int
+  activity   PerformanceActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  employee   Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  @@id([activityId, employeeId])
+  @@map("activity_participants")
+}
+
+model PayrollDocument {
+  id           Int      @id @default(autoincrement())
+  companyId    Int
+  company      Company  @relation(fields: [companyId], references: [id])
+  name         String
+  category     String
+  month        String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  createdAt    DateTime @default(now())
+  @@map("payroll_documents")
+}
+
+model User {
+  id              Int               @id @default(autoincrement())
+  email           String            @unique
+  password        String
+  firstName       String
+  lastName        String
+  // ADMIN | MANAGEMENT | EMPLOYEE
+  role            String            @default("MANAGEMENT")
+  companyId       Int
+  company         Company           @relation(fields: [companyId], references: [id])
+  employeeId      Int?              @unique
+  employee        Employee?         @relation(fields: [employeeId], references: [id])
+  assignedCases       WhistleblowCase[]
+  assignedTasks       OnboardingTask[]             @relation("TaskAssignee")
+  notifications       Notification[]
+  categoryAssignments OnboardingCategoryAssignee[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  @@map("users")
+}
+
+model OnboardingPlan {
+  id         Int              @id @default(autoincrement())
+  companyId  Int
+  company    Company          @relation(fields: [companyId], references: [id])
+  employeeId Int
+  employee   Employee         @relation(fields: [employeeId], references: [id])
+  name       String
+  startDate  DateTime
+  tasks      OnboardingTask[]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  @@map("onboarding_plans")
+}
+
+model OnboardingTask {
+  id          Int            @id @default(autoincrement())
+  planId      Int
+  plan        OnboardingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  title       String
+  category    String         @default("OTHER")
+  dueDate     DateTime?
+  completed   Boolean        @default(false)
+  completedAt DateTime?
+  order       Int            @default(0)
+  assigneeId  Int?
+  assignee    User?          @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  @@map("onboarding_tasks")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId Int
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@map("notifications")
+}
+
+model WhistleblowCase {
+  id          Int                  @id @default(autoincrement())
+  companyId   Int
+  company     Company              @relation(fields: [companyId], references: [id])
+  title       String
+  description String?
+  category    String               @default("OTHER")
+  priority    String               @default("MEDIUM")
+  status      String               @default("TODO")
+  assigneeId  Int?
+  assignee    User?                @relation(fields: [assigneeId], references: [id])
+  archived    Boolean              @default(false)
+  messages    WhistleblowMessage[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  @@map("whistleblow_cases")
+}
+
+model WhistleblowMessage {
+  id           Int             @id @default(autoincrement())
+  caseId       Int
+  case         WhistleblowCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  body         String
+  fromReporter Boolean         @default(true)
+  read         Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  @@map("whistleblow_messages")
+}
+
+model Department {
+  id          Int          @id @default(autoincrement())
+  name        String
+  managerId   Int?
+  companyId   Int
+  company     Company      @relation(fields: [companyId], references: [id])
+  employees   Employee[]
+  jobPostings JobPosting[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  @@map("departments")
+}
+
+model Employee {
+  id             Int              @id @default(autoincrement())
+  companyId      Int
+  company        Company          @relation(fields: [companyId], references: [id])
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  dateOfBirth    DateTime?
+  gender         String?
+  street         String?
+  city           String?
+  postalCode     String?
+  country        String?          @default("Deutschland")
+  emergencyName  String?
+  emergencyPhone String?
+  departmentId   Int?
+  department     Department?      @relation(fields: [departmentId], references: [id])
+  position       String
+  managerId      Int?
+  manager        Employee?        @relation("ManagerToEmployee", fields: [managerId], references: [id])
+  reports        Employee[]       @relation("ManagerToEmployee")
+  startDate      DateTime
+  endDate        DateTime?
+  status         String           @default("ACTIVE")
+  employmentType String           @default("FULL_TIME")
+  weeklyHours    Float?           @default(40)
+  salary         Float?
+  salaryGrade    String?
+  bio            String?
+  skills         String?
+  absenceRequests      AbsenceRequest[]
+  activityParticipants ActivityParticipant[]
+  onboardingPlans      OnboardingPlan[]
+  user                 User?
+  createdAt            DateTime              @default(now())
+  updatedAt      DateTime         @updatedAt
+  @@map("employees")
+}
+
+model JobPosting {
+  id             Int         @id @default(autoincrement())
+  companyId      Int
+  company        Company     @relation(fields: [companyId], references: [id])
+  title          String
+  departmentId   Int?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  description    String?
+  status         String      @default("OPEN")
+  // Extended fields
+  location       String?
+  address        String?
+  employmentType String?
+  salaryType     String?
+  salaryMin      Float?
+  salaryMax      Float?
+  benefits       String?
+  tasks          String?
+  requirements   String?
+  shiftModel     String?
+  candidates     Candidate[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  @@map("job_postings")
+}
+
+model Candidate {
+  id           Int        @id @default(autoincrement())
+  companyId    Int
+  company      Company    @relation(fields: [companyId], references: [id])
+  firstName    String
+  lastName     String
+  email        String
+  jobPostingId Int
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id])
+  status       String     @default("APPLIED")
+  appliedAt    DateTime   @default(now())
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  @@map("candidates")
+}
+
+model Workflow {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String   @default("Neuer Workflow")
+  active    Boolean  @default(false)
+  nodes     String   @default("[]")
+  edges     String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("workflows")
+}
+
+model OnboardingCategoryAssignee {
+  id        Int     @id @default(autoincrement())
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category  String
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([companyId, category])
+  @@map("onboarding_category_assignees")
+}
+
+model AbsenceRequest {
+  id         Int      @id @default(autoincrement())
+  companyId  Int
+  company    Company  @relation(fields: [companyId], references: [id])
+  employeeId Int
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  type       String
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("PENDING")
+  reason     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@map("absence_requests")
+}
