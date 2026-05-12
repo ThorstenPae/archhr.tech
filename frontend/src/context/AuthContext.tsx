@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-const API = 'http://localhost:3001'
+const API = 'https://archhrtech-production.up.railway.app'
 
 interface User {
   id: number

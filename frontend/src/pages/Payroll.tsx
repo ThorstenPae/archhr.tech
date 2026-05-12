@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Users, UserPlus, UserMinus, Euro, CheckCircle, Clock, AlertCircle, Upload, Download, Trash2, FileText } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const BASE = 'https://archhrtech-production.up.railway.app'
 
 const DOC_CATEGORIES = [
   { key: 'GEHALTSABRECHNUNG',     label: 'Gehaltsabrechnung' },
