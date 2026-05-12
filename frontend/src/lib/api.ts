@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const BASE = import.meta.env.VITE_API_URL ?? 'https://archhrtech-production.up.railway.app'
 
 function getToken() {
   return localStorage.getItem('hr_token')
